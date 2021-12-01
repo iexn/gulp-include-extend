@@ -67,3 +67,19 @@
 ```
 
 以上两个语法是成对存在的，插槽名称必须设置相同，且与模板文件定义的插槽名称相同。
+
+---
+
+- includePaths 转义前处理（v1.2.5）
+
+对于定义了 includePaths 的配置但是无法分文件处理的情况，开放了include处理前操作
+
+```
+{
+    includeTrim: function (includePath, filePath) {
+        return includePath;
+    }
+}
+```
+
+其中，`includePath` 为引入模板定义地址，`filePath` 为文件流文件地址，返回值为处理后的 `includePath`，且必须返回

@@ -5,7 +5,25 @@ var glob = require('glob');
 var PluginError = require('plugin-error');
 var colors = require('ansi-colors');
 var applySourceMap = require('vinyl-sourcemaps-apply');
-var stripBom = require('strip-bom');
+// var stripBom = require('strip-bom');
+
+var stripBom = function stripBom(string) {
+    if (Buffer.isBuffer(string)) {
+        string = string.toString();
+    }
+
+	if (typeof string !== 'string') {
+		throw new TypeError(`Expected a string, got ${typeof string}`);
+	}
+
+	// Catches EFBBBF (UTF-8 BOM) because the buffer-to-string
+	// conversion translates it to FEFF (UTF-16 BOM).
+	if (string.charCodeAt(0) === 0xFEFF) {
+		return string.slice(1);
+	}
+
+	return string;
+}
 
 module.exports = function(params) {
     params = params || {};
@@ -18,6 +36,15 @@ module.exports = function(params) {
     var includePaths = false; // The paths to be searched
     var hardFail = false; // Throw error when no match
     var separateInputs = false; // Process each input file separately when using `require` directive
+
+    // 添加埋点：对匹配引入进行再次更新
+    var includeTrim = function (includePath, filePath) {
+        if (params.includeTrim) {
+            return params.includeTrim(includePath, filePath);
+        }
+        
+        return includePath;
+    }
 
     // Check for includepaths in the params
     if (params.includePaths) {
@@ -101,6 +128,8 @@ module.exports = function(params) {
                         if (extendSrc.indexOf(y + '/') == 0) {
                             var _includePath = includePaths[y] + extendSrc.slice(y.length);
 
+                            _includePath = includeTrim(_includePath, filePath);
+
                             _extend_content = glob.sync(_includePath, {
                                 mark: true
                             });
@@ -111,20 +140,12 @@ module.exports = function(params) {
                         }
                     }
 
-                    // for (var y = 0; y < includePaths.length; y++) {
-                    //     var _includePath = includePaths[y] + '/' + extendSrc;
-
-                    //     _extend_content = glob.sync(_includePath, {
-                    //         mark: true
-                    //     });
-
-                    //     if (_extend_content) {
-                    //         break;
-                    //     }
-                    // }
                 } else {
                     // Otherwise search relatively
                     var _includePath = relativeBasePath + '/' + removeRelativePathPrefix(extendSrc);
+
+                    _includePath = includeTrim(_includePath, filePath);
+
                     _extend_content = glob.sync(_includePath, {
                         mark: true
                     });
@@ -284,6 +305,8 @@ module.exports = function(params) {
                     if (split[1].indexOf(y + '/') == 0) {
                         includePath = includePaths[y] + split[1].slice(y.length);
 
+                        includePath = includeTrim(includePath, filePath);
+
                         var globResults = glob.sync(includePath, {
                             mark: true
                         });
@@ -295,21 +318,18 @@ module.exports = function(params) {
                 if (!matched) {
                     includePath = split[1];
 
+                    includePath = includeTrim(includePath, filePath);
+
                     fileMatches = fileMatches.concat(glob.sync(includePath, {
                         mark: true
                     }));
                 }
-                // for (var y = 0; y < includePaths.length; y++) {
-                //     includePath = includePaths[y] + '/' + split[1];
-
-                //     var globResults = glob.sync(includePath, {
-                //         mark: true
-                //     });
-                //     fileMatches = fileMatches.concat(globResults);
-                // }
             } else {
                 // Otherwise search relatively
                 includePath = relativeBasePath + '/' + removeRelativePathPrefix(split[1]);
+
+                includePath = includeTrim(includePath, filePath);
+
                 fileMatches = glob.sync(includePath, {
                     mark: true
                 });
