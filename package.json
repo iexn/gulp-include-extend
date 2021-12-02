@@ -1,6 +1,6 @@
 {
   "name": "gulp-include-extend",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "gulp-include的简单扩展版，支持插槽和模板文件",
   "main": "index.js",
   "scripts": {

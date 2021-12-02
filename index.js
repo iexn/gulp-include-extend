@@ -105,7 +105,11 @@ module.exports = function(params) {
         callback(null, file);
     }
 
-    function processInclude(content, filePath, sourceMap, includedFiles) {
+    function processInclude(content, filePath, sourceMap, includedFiles, extendFilePath) {
+        if (extendFilePath === undefined) {
+            extendFilePath = filePath;
+        }
+
         // 检测是否使用了继承文件
         var extendes = content.match(/^(\s+)?(\/\/|\/\*|\#|\<\!\-\-)(\s+)?=(\s+)?(extend)(.*$)/mg);
         if (extendes) {
@@ -128,7 +132,7 @@ module.exports = function(params) {
                         if (extendSrc.indexOf(y + '/') == 0) {
                             var _includePath = includePaths[y] + extendSrc.slice(y.length);
 
-                            _includePath = includeTrim(_includePath, filePath);
+                            _includePath = includeTrim(_includePath, extendFilePath);
 
                             _extend_content = glob.sync(_includePath, {
                                 mark: true
@@ -144,7 +148,7 @@ module.exports = function(params) {
                     // Otherwise search relatively
                     var _includePath = relativeBasePath + '/' + removeRelativePathPrefix(extendSrc);
 
-                    _includePath = includeTrim(_includePath, filePath);
+                    _includePath = includeTrim(_includePath, extendFilePath);
 
                     _extend_content = glob.sync(_includePath, {
                         mark: true
@@ -210,7 +214,7 @@ module.exports = function(params) {
                 }
 
                 // 使用整理好的内容重新执行当前函数
-                return processInclude(_extend_content, filePath, sourceMap, includedFiles);
+                return processInclude(_extend_content, filePath, sourceMap, includedFiles, extendFilePath ? extendFilePath : filePath);
             }
         } else {
             // 清除掉没用的调用block
@@ -305,7 +309,7 @@ module.exports = function(params) {
                     if (split[1].indexOf(y + '/') == 0) {
                         includePath = includePaths[y] + split[1].slice(y.length);
 
-                        includePath = includeTrim(includePath, filePath);
+                        includePath = includeTrim(includePath, extendFilePath);
 
                         var globResults = glob.sync(includePath, {
                             mark: true
@@ -318,7 +322,7 @@ module.exports = function(params) {
                 if (!matched) {
                     includePath = split[1];
 
-                    includePath = includeTrim(includePath, filePath);
+                    includePath = includeTrim(includePath, extendFilePath);
 
                     fileMatches = fileMatches.concat(glob.sync(includePath, {
                         mark: true
@@ -351,7 +355,7 @@ module.exports = function(params) {
                 // Unicode byte order marks are stripped from the start of included files
                 var fileContents = stripBom(fs.readFileSync(globbedFilePath));
 
-                var result = processInclude(fileContents.toString(), globbedFilePath, sourceMap, includedFiles);
+                var result = processInclude(fileContents.toString(), globbedFilePath, sourceMap, includedFiles, extendFilePath ? extendFilePath : filePath);
                 var resultContent = result.content;
 
                 if (sourceMap) {
